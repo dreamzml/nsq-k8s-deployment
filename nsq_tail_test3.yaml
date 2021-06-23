@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nsq-tail3-deployment
+  namespace: nsq
+  labels:
+    app: nsq-tail3-lab
+spec:
+  selector:
+    matchLabels:
+      app: nsq-tail3-lab
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nsq-tail3-lab
+    spec:
+      containers:
+        - name: nsqadmin
+          image: nsqio/nsq
+          command:
+            - /bin/sh
+            - '-c'
+            - >-
+              /nsq_tail
+              --lookupd-http-address=nsqlookupd-statefulset-0.nsqlookupd-svc.nsq.svc.cluster.local:4161
+              --lookupd-http-address=nsqlookupd-statefulset-1.nsqlookupd-svc.nsq.svc.cluster.local:4161
+              --lookupd-http-address=nsqlookupd-statefulset-2.nsqlookupd-svc.nsq.svc.cluster.local:4161
+              --channel=channel3
+              --topic=test2

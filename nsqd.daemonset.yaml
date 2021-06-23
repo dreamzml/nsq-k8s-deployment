@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nsqd-daemonset
+  namespace: nsq
+  labels:
+    app: nsqd-lab
+spec:
+  selector:
+    matchLabels:
+      app: nsqd-lab
+  template:
+    metadata:
+      labels:
+        app: nsqd-lab
+    spec:
+      containers:
+        - name: nsqd
+          image: nsqio/nsq
+          command:
+            - /bin/sh
+            - '-c'
+            - >-
+              ip=`/sbin/ifconfig -a|grep inet|grep -v 127.0.0.1|grep -v inet6|awk '{print $2}'|tr -d "addr:"`
+              && /nsqd 
+              --lookupd-tcp-address=nsqlookupd-statefulset-0.nsqlookupd-svc.nsq.svc.cluster.local:4160
+              --lookupd-tcp-address=nsqlookupd-statefulset-1.nsqlookupd-svc.nsq.svc.cluster.local:4160
+              --lookupd-tcp-address=nsqlookupd-statefulset-2.nsqlookupd-svc.nsq.svc.cluster.local:4160
+              --broadcast-address=$ip
+              --data-path=/data/nsqd-dat
+          ports:
+            - name: port-4150
+              containerPort: 4150
+              protocol: TCP
+            - name: port-4151
+              containerPort: 4151
+              protocol: TCP
+          volumeMounts:
+            - name: data-path
+              mountPath: /data/nsqd-dat
+
+      volumes:
+        - name: data-path
+          hostPath:
+              path: /data/nsqd-dat
+              type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nsqd-svc
+  namespace: nsq
+  labels:
+    app: nsqd-lab-svc
+spec:
+  type: NodePort
+  ports:
+    - name: port-svc-4150
+      port: 4150
+      targetPort: 4150
+      protocol: TCP
+    - name: port-svc-4151
+      port: 4151
+      targetPort: 4151
+      protocol: TCP
+  selector:
+    app: nsqd-lab
